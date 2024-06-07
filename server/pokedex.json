@@ -1,0 +1,37 @@
+[
+    {
+      "id": "1",
+      "name": "Bulbasaur",
+      "types": [
+        "grass",
+        "poison"
+      ],
+      "stats": {
+        "Attack": "49",
+        "Defense": "49",
+        "HP": "45",
+        "Sp Atk": "65",
+        "Sp Def": "65",
+        "Speed": "45"
+      },
+      "exp": "64"
+    },
+    {
+      "id": "2",
+      "name": "Ivysaur",
+      "types": [
+        "grass",
+        "poison"
+      ],
+      "stats": {
+        "Attack": "62",
+        "Defense": "63",
+        "HP": "60",
+        "Sp Atk": "80",
+        "Sp Def": "80",
+        "Speed": "60"
+      },
+      "exp": "142"
+    }
+  ]
+  

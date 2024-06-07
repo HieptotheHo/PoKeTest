@@ -1,0 +1,48 @@
+[
+    {
+        "username":"hiep",
+        "password":"$2a$10$ZOz/iJR9qj7EjIbUIw66p.FZ9qHZ3vJutffxk1AC/dwcerA61O736",
+        "pokeBalls": [
+            {
+                "id": "1",
+                "name": "Bulbasaur",
+                "types": [
+                  "grass",
+                  "poison"
+                ],
+                "stats": {
+                  "Attack": "49",
+                  "Defense": "49",
+                  "HP": "45",
+                  "Sp Atk": "65",
+                  "Sp Def": "65",
+                  "Speed": "45"
+                },
+                "exp": "64"
+              }
+        ]
+    },
+    {
+      "username":"hanh",
+      "password":"$2a$10$JjLGwyO0F3awf0nk9Db0Wu1h2zvPyzkuN9JV/Fy78ZCWBl.DD52bq",
+      "pokeBalls": [
+        {
+          "id": "2",
+          "name": "Ivysaur",
+          "types": [
+            "grass",
+            "poison"
+          ],
+          "stats": {
+            "Attack": "62",
+            "Defense": "63",
+            "HP": "60",
+            "Sp Atk": "80",
+            "Sp Def": "80",
+            "Speed": "60"
+          },
+          "exp": "142"
+        }
+      ]
+  }
+]
