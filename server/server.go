@@ -32,6 +32,8 @@ var POKEMONS []Pokemon
 
 // var exchangeMap = make(map[string]string)
 // var exchangeJSON []byte
+var MAP = make(map[string]string)
+
 var PLAYERS []Player
 var ROWS, COLS = 1000, 1000
 var BOARD = make([][]string, ROWS)
@@ -80,9 +82,6 @@ func loadPokemons(filename string) ([]Pokemon, error) {
 
 	return pokemons, nil
 }
-
-//////////////////////////////////////////////////////////////////////////////////////
-
 func verifyPlayer(username, password string, players []Player) bool {
 	for _, user := range players {
 		if user.Username == username {
@@ -92,6 +91,18 @@ func verifyPlayer(username, password string, players []Player) bool {
 	}
 	return false
 }
+func generateRandomPokemons(num int) {
+	for range num {
+		spawnX := rand.Intn(ROWS)
+		spawnY := rand.Intn(COLS)
+
+		pokemonID := POKEMONS[rand.Intn(len(POKEMONS))].ID
+
+		BOARD[spawnX][spawnY] = pokemonID
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
 
 // HandleConnection handles incoming client connections
 func HandleConnection(conn net.Conn) {

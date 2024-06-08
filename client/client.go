@@ -13,14 +13,30 @@ import (
 	"github.com/eiannone/keyboard"
 )
 
-var ROWS, COLS = 10, 10
+var ROWS, COLS = 10, 18
 var BOARD = make([][]string, ROWS)
+var USERNAME = ""
 
+func drawTitle() {
+	fmt.Println("                                  ,'\\")
+	fmt.Println("    _.----.        ____         ,'  _\\   ___    ___     ____")
+	fmt.Println("_,-'       `.     |    |  /`.   \\,-'    |   \\  /   |   |    \\  |`.")
+	fmt.Println("\\      __    \\    '-.  | /   `.  ___    |    \\/    |   '-.   \\ |  |")
+	fmt.Println(" \\.    \\ \\   |  __  |  |/    ,','_  `.  |          | __  |    \\|  |")
+	fmt.Println("   \\    \\/   /,' _`.|      ,' / / / /   |          ,' _`.|     |  |")
+	fmt.Println("    \\     ,-'/  / \\ \\    ,'   | \\/ / ,`.|         /  / \\ \\  |     |")
+	fmt.Println("     \\    \\ |   \\_/  |   `-.  \\    `'  /|  |    ||   \\_/  | |\\    |")
+	fmt.Println("      \\    \\ \\      /       `-.`.___,-' |  |\\  /| \\      /  | |   |")
+	fmt.Println("       \\    \\ `.__,'|  |`-._    `|      |__| \\/ |  `.__,'|  | |   |")
+	fmt.Println("        \\_.-'       |__|    `-._ |              '-.|     '-.| |   |")
+	fmt.Println("                                `'                            '-._|")
+}
 func drawBoard(board [][]string) {
-	fmt.Println(board)
+
 	cmd := exec.Command("cmd", "/c", "cls")
 	cmd.Stdout = os.Stdout
 	cmd.Run()
+	drawTitle()
 	// Function to generate a horizontal line
 	horizontalLine := func(length int) string {
 		return "+" + strings.Repeat("---+", length)
@@ -30,12 +46,16 @@ func drawBoard(board [][]string) {
 		// Print horizontal line before each row
 		fmt.Println(horizontalLine(len(row)))
 
-		// Print cell values or empty spaces
+		// Print cell values or empty spaces ☺ ☻ ☠
 		for _, cell := range row {
 			if cell == "" {
 				fmt.Print("|   ")
 			} else {
-				fmt.Printf("| %s ", "?")
+				if cell == USERNAME {
+					fmt.Printf("| %s ", "☠")
+				} else {
+					fmt.Printf("| %s ", "?")
+				}
 			}
 		}
 		fmt.Println("|")
@@ -49,14 +69,14 @@ func readFromServer(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	for {
 		// Read server's response
-		message, err := reader.ReadString('\n')
+		_, err := reader.ReadString('\n')
 		if err != nil {
 			fmt.Println("Disconnected from server")
 			return
 		}
 
 		// Print the message from the server
-		fmt.Print("Server response: " + message)
+		// fmt.Print("Server response: " + message)
 		drawBoard(BOARD)
 	}
 }
@@ -67,8 +87,8 @@ func main() {
 		BOARD[i] = make([]string, COLS)
 	}
 
-	X := rand.Intn(COLS)
-	Y := rand.Intn(ROWS)
+	X := rand.Intn(ROWS)
+	Y := rand.Intn(COLS)
 
 	// Connect to the server
 	conn, err := net.Dial("tcp", "localhost:8080")
@@ -100,6 +120,7 @@ func main() {
 	checkError(err)
 
 	if strings.TrimSpace(string(buffer[:n])) == "successful" {
+		USERNAME = username
 		BOARD[X][Y] = username
 		_, err := conn.Write([]byte(strconv.Itoa(X) + "-" + strconv.Itoa(Y) + "\n"))
 		checkError(err)
@@ -127,42 +148,57 @@ func main() {
 			fmt.Println("Failed to open keyboard:", err)
 		}
 		for {
-			char, key, err := keyboard.GetKey()
+			_, key, err := keyboard.GetKey()
 			if err != nil {
 				fmt.Println("Error reading key:", err)
 				continue
 			}
 
 			switch key {
+
 			case keyboard.KeyArrowUp:
-				fmt.Println("You pressed UP")
-				Y--
-				fmt.Println(X, "-", Y)
-				_, err := conn.Write([]byte(strconv.Itoa(X) + "-" + strconv.Itoa(Y) + "\n"))
-				checkError(err)
+				if X > 0 {
+					BOARD[X][Y] = ""
+					X--
+					BOARD[X][Y] = USERNAME
+					_, err := conn.Write([]byte(strconv.Itoa(X) + "-" + strconv.Itoa(Y) + "\n"))
+					checkError(err)
+				}
 
 			case keyboard.KeyArrowDown:
-				Y++
-				_, err := conn.Write([]byte(strconv.Itoa(X) + "-" + strconv.Itoa(Y) + "\n"))
-				checkError(err)
+				if X < ROWS-1 {
+					BOARD[X][Y] = ""
+					X++
+					BOARD[X][Y] = USERNAME
+					_, err := conn.Write([]byte(strconv.Itoa(X) + "-" + strconv.Itoa(Y) + "\n"))
+					checkError(err)
+				}
 
 			case keyboard.KeyArrowLeft:
-				X--
-				_, err := conn.Write([]byte(strconv.Itoa(X) + "-" + strconv.Itoa(Y) + "\n"))
-				checkError(err)
+				if Y > 0 {
+					BOARD[X][Y] = ""
+					Y--
+					BOARD[X][Y] = USERNAME
+					_, err := conn.Write([]byte(strconv.Itoa(X) + "-" + strconv.Itoa(Y) + "\n"))
+					checkError(err)
+				}
 
 			case keyboard.KeyArrowRight:
-				X++
-				_, err := conn.Write([]byte(strconv.Itoa(X) + "-" + strconv.Itoa(Y) + "\n"))
-				checkError(err)
+
+				if Y < COLS-1 {
+					BOARD[X][Y] = ""
+					Y++
+					BOARD[X][Y] = USERNAME
+					_, err := conn.Write([]byte(strconv.Itoa(X) + "-" + strconv.Itoa(Y) + "\n"))
+					checkError(err)
+				}
+
 			case keyboard.KeyEsc:
 				fmt.Println("Exiting...")
 				return
 			}
 
-			if char != 0 {
-				fmt.Printf("You pressed the key: %c\n", char)
-			}
+			drawBoard(BOARD)
 		}
 	}
 
