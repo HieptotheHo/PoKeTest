@@ -2,13 +2,15 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
-	"math/rand"
+	"io"
 	"net"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/eiannone/keyboard"
 )
@@ -16,7 +18,45 @@ import (
 var ROWS, COLS = 10, 18
 var BOARD = make([][]string, ROWS)
 var USERNAME = ""
+var X int
+var Y int
 
+var ENEMIES = make(map[string]string)
+
+type Pokemon struct {
+	ID    string            `json:"id"`
+	Name  string            `json:"name"`
+	Types []string          `json:"types"`
+	Stats map[string]string `json:"stats"`
+	Exp   string            `json:"exp"`
+}
+
+var POKEMONS []Pokemon
+
+func loadPokemons(filename string) []Pokemon {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil
+	}
+	defer file.Close()
+
+	bytes, err := io.ReadAll(file)
+	if err != nil {
+		return nil
+	}
+
+	var pokemons []Pokemon
+	err = json.Unmarshal(bytes, &pokemons)
+	if err != nil {
+		return nil
+	}
+
+	return pokemons
+}
+func isNumber(str string) bool {
+	_, err := strconv.Atoi(str)
+	return err == nil
+}
 func drawTitle() {
 	fmt.Println("                                  ,'\\")
 	fmt.Println("    _.----.        ____         ,'  _\\   ___    ___     ____")
@@ -51,11 +91,17 @@ func drawBoard(board [][]string) {
 			if cell == "" {
 				fmt.Print("|   ")
 			} else {
-				if cell == USERNAME {
-					fmt.Printf("| %s ", "☠")
-				} else {
+				if isNumber(cell) {
 					fmt.Printf("| %s ", "?")
+				} else {
+
+					if cell == USERNAME {
+						fmt.Printf("| %s ", "☻")
+					} else {
+						fmt.Printf("| %s ", "☠")
+					}
 				}
+
 			}
 		}
 		fmt.Println("|")
@@ -63,21 +109,188 @@ func drawBoard(board [][]string) {
 	// Print the final horizontal line after all rows
 	fmt.Println(horizontalLine(len(board[0])))
 }
+func drawCongrats() {
+	fmt.Println("░█████╗░░█████╗░███╗░░██╗░██████╗░██████╗░░█████╗░████████╗░██████╗")
+	fmt.Println("██╔══██╗██╔══██╗████╗░██║██╔════╝░██╔══██╗██╔══██╗╚══██╔══╝██╔════╝")
+	fmt.Println("██║░░╚═╝██║░░██║██╔██╗██║██║░░██╗░██████╔╝███████║░░░██║░░░╚█████╗░")
+	fmt.Println("██║░░██╗██║░░██║██║╚████║██║░░╚██╗██╔══██╗██╔══██║░░░██║░░░░╚═══██╗")
+	fmt.Println("╚█████╔╝╚█████╔╝██║░╚███║╚██████╔╝██║░░██║██║░░██║░░░██║░░░██████╔╝")
+	fmt.Println("░╚════╝░░╚════╝░╚═╝░░╚══╝░╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝░░░╚═╝░░░╚═════╝░")
+}
+func drawStats(pokemon Pokemon) {
+	fmt.Println(pokemon.Name)
+	fmt.Print("Types: ")
+	for i := 0; i < len(pokemon.Types); i++ {
+		fmt.Print(pokemon.Types[i] + " ")
+	}
+	fmt.Println()
+
+	fmt.Print("HP:              ")
+	hp, _ := strconv.Atoi(pokemon.Stats["HP"])
+	for i := 0; i < hp; i++ {
+		fmt.Print("█")
+	}
+	fmt.Println()
+	fmt.Println()
+
+	fmt.Print("ATTACK:          ")
+	attk, _ := strconv.Atoi(pokemon.Stats["Attack"])
+	for i := 0; i < attk; i++ {
+		fmt.Print("█")
+	}
+	fmt.Println()
+	fmt.Println()
+
+	fmt.Print("SPECIAL ATTACK:  ")
+	sp_atk, _ := strconv.Atoi(pokemon.Stats["Sp Atk"])
+	for i := 0; i < sp_atk; i++ {
+		fmt.Print("█")
+	}
+	fmt.Println()
+	fmt.Println()
+
+	fmt.Print("DEFENSE:         ")
+	df, _ := strconv.Atoi(pokemon.Stats["Defense"])
+	for i := 0; i < df; i++ {
+		fmt.Print("█")
+	}
+	fmt.Println()
+	fmt.Println()
+
+	fmt.Print("SPECIAL DEFENSE: ")
+	sp_def, _ := strconv.Atoi(pokemon.Stats["Sp Def"])
+	for i := 0; i < sp_def; i++ {
+		fmt.Print("█")
+	}
+	fmt.Println()
+	fmt.Println()
+
+	fmt.Print("SPEED:           ")
+	speed, _ := strconv.Atoi(pokemon.Stats["Speed"])
+	for i := 0; i < speed; i++ {
+		fmt.Print("█")
+	}
+	fmt.Println()
+	fmt.Println()
+}
+
+var pokeBalls []Pokemon
+var DRAWBOARD_SIGNAL = true
+
+func showNewPoKemon(pokemon Pokemon) {
+	for {
+
+		cmd := exec.Command("cmd", "/c", "cls")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+		drawCongrats()
+		drawStats(pokemon)
+		cmd = exec.Command("cmd", "/c", "image2ascii.exe -f .\\pokemon_images\\pokemon_"+pokemon.ID+".png -r 0.7")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+		pokeBalls = append(pokeBalls, pokemon)
+		fmt.Println(pokeBalls)
+		time.Sleep(5 * time.Second)
+		DRAWBOARD_SIGNAL = true
+		drawBoard(BOARD)
+		break
+
+	}
+}
 
 // read from the server and print to console
 func readFromServer(conn net.Conn) {
-	reader := bufio.NewReader(conn)
+	// reader := bufio.NewReader(conn)
+
 	for {
+		buf := make([]byte, 1024)
 		// Read server's response
-		_, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Disconnected from server")
-			return
-		}
+		// message, err := reader.ReadString('\n')
+
+		n, err := conn.Read(buf)
+		checkError(err)
 
 		// Print the message from the server
-		// fmt.Print("Server response: " + message)
-		drawBoard(BOARD)
+		var locations map[string]string
+
+		err = json.Unmarshal(buf[:n], &locations)
+		checkError(err)
+		// fmt.Println("Server response: ", locations)
+
+		for location, id := range locations {
+			location = strings.TrimSpace(location)
+			id = strings.TrimSpace(id)
+			//HANDLE DISCONNECTION
+
+			if location == USERNAME {
+
+				if isNumber(id) {
+					index, _ := strconv.Atoi(id)
+					newPokemon := POKEMONS[index]
+
+					go showNewPoKemon(newPokemon)
+					DRAWBOARD_SIGNAL = false
+				}
+
+			} else {
+				if id == "quit" {
+					fmt.Println(location + " is disconnected")
+					for ene_location, enemy := range ENEMIES {
+						if enemy == location {
+							enemyX, _ := strconv.Atoi(strings.Split(ene_location, "-")[0])
+							enemyY, _ := strconv.Atoi(strings.Split(ene_location, "-")[1])
+
+							BOARD[enemyX][enemyY] = ""
+							fmt.Println(ENEMIES)
+							delete(ENEMIES, ene_location)
+
+							break
+						}
+					}
+
+				} else {
+					//RECEIVE MOVEMENT FROM PLAYERS AND SPAWN COORD OF POKEMONS AS A "MAP"
+					spawnX, _ := strconv.Atoi(strings.Split(location, "-")[0])
+					spawnY, _ := strconv.Atoi(strings.Split(location, "-")[1])
+
+					if isNumber(id) {
+						//pokemon
+						BOARD[spawnX][spawnY] = id
+					} else {
+
+						if id == USERNAME {
+							//you
+							X = spawnX
+							Y = spawnY
+							BOARD[spawnX][spawnY] = USERNAME
+						} else {
+							//enemies
+							for ene_location, enemy := range ENEMIES {
+								if enemy == id {
+									enemyX, _ := strconv.Atoi(strings.Split(ene_location, "-")[0])
+									enemyY, _ := strconv.Atoi(strings.Split(ene_location, "-")[1])
+
+									BOARD[enemyX][enemyY] = ""
+									delete(ENEMIES, ene_location)
+
+								}
+
+							}
+							ENEMIES[strconv.Itoa(spawnX)+"-"+strconv.Itoa(spawnY)] = id
+							BOARD[spawnX][spawnY] = "enemy"
+
+						}
+
+					}
+				}
+
+			}
+
+		}
+		if DRAWBOARD_SIGNAL {
+			drawBoard(BOARD)
+		}
+
 	}
 }
 
@@ -86,10 +299,7 @@ func main() {
 	for i := range BOARD {
 		BOARD[i] = make([]string, COLS)
 	}
-
-	X := rand.Intn(ROWS)
-	Y := rand.Intn(COLS)
-
+	POKEMONS = loadPokemons("pokedex.json")
 	// Connect to the server
 	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {
@@ -120,39 +330,23 @@ func main() {
 	checkError(err)
 
 	if strings.TrimSpace(string(buffer[:n])) == "successful" {
-		USERNAME = username
-		BOARD[X][Y] = username
-		_, err := conn.Write([]byte(strconv.Itoa(X) + "-" + strconv.Itoa(Y) + "\n"))
+		n, err = conn.Read(buffer)
 		checkError(err)
+		pokemonIndexes := strings.Split(strings.TrimSpace(string(buffer[:n])), "-")
+		for _, pokemonIndex := range pokemonIndexes {
+			index, _ := strconv.Atoi(pokemonIndex)
+			showNewPoKemon(POKEMONS[index])
+		}
+		USERNAME = username
 		go readFromServer(conn)
 		fmt.Println("MAIN GAME:")
-		// for scanner.Scan() {
-		// 	message := scanner.Text()
-		// 	if message == "exit" {
-		// 		fmt.Println("Exiting...")
-		// 		break
-		// 	}
-
-		// 	// Send the message to the server
-		// 	_, err := conn.Write([]byte(message + "\n"))
-		// 	if err != nil {
-		// 		fmt.Println("Error writing to server:", err)
-		// 		break
-		// 	}
-		// }
-		// if err := scanner.Err(); err != nil {
-		// 	fmt.Println("Error reading from stdin:", err)
-		// }
 		// Initialize the keyboard
 		if err := keyboard.Open(); err != nil {
 			fmt.Println("Failed to open keyboard:", err)
 		}
 		for {
 			_, key, err := keyboard.GetKey()
-			if err != nil {
-				fmt.Println("Error reading key:", err)
-				continue
-			}
+			checkError(err)
 
 			switch key {
 
@@ -197,8 +391,7 @@ func main() {
 				fmt.Println("Exiting...")
 				return
 			}
-
-			drawBoard(BOARD)
+			// drawBoard(BOARD)
 		}
 	}
 
@@ -206,7 +399,7 @@ func main() {
 
 func checkError(err error) {
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal error ", err.Error())
+		fmt.Fprintf(os.Stderr, "Fatal error ", err)
 		os.Exit(1)
 	}
 }
