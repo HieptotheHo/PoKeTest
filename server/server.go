@@ -141,24 +141,11 @@ func handlePokemons() {
 	}
 
 }
+func battle(player1 string, player2 string) {
+
+}
 
 // HandleConnection handles incoming client connections
-func sendInitialPokemons(conn net.Conn) {
-	var username string
-	for name, connection := range CONNECTIONS {
-		if connection == conn {
-			username = name
-		}
-	}
-	for range 3 {
-		initialPokemons := make(map[string]string)
-		initialPokemons[strings.TrimSpace(username)] = strconv.Itoa(rand.Intn(len(POKEMONS)))
-		sentInitialPokemons, _ := json.Marshal(initialPokemons)
-		conn.Write([]byte(sentInitialPokemons))
-		fmt.Println(initialPokemons)
-		time.Sleep(10 * time.Second)
-	}
-}
 func HandleConnection(conn net.Conn) {
 
 	defer conn.Close()
@@ -166,6 +153,7 @@ func HandleConnection(conn net.Conn) {
 	// Create a reader to read data from the connection
 	reader := bufio.NewReader(conn)
 	for {
+		battleStatus := false
 		// Read data from the connection
 		player_coord, err := reader.ReadString('\n')
 
@@ -198,6 +186,10 @@ func HandleConnection(conn net.Conn) {
 
 		}
 
+		if strings.Split(player_coord, "-")[0] == "battle" {
+
+		}
+
 		// iterate through connections
 		for name, connection := range CONNECTIONS {
 			// find matching name
@@ -221,14 +213,47 @@ func HandleConnection(conn net.Conn) {
 							pokemonX, _ := strconv.Atoi(strings.Split(playerLocation, "-")[0])
 							pokemonY, _ := strconv.Atoi(strings.Split(playerLocation, "-")[1])
 							BOARD[pokemonX][pokemonY] = ""
-							delete(POKEMON_LOCATIONS, playerLocation)
+							delete(POKEMON_LOCATIONS, strings.TrimSpace(player_coord))
+							fmt.Println(POKEMON_LOCATIONS)
+							for _, tcpConn := range CONNECTIONS {
+								if tcpConn != conn {
+									pokemonGone := make(map[string]string)
+									pokemonGone[strings.TrimSpace(player_coord)] = ""
+									sentPokemonGone, _ := json.Marshal(pokemonGone)
+									tcpConn.Write([]byte(sentPokemonGone))
+								}
+							}
+						} else {
+							for enemy_location, enemy_name := range PLAYER_LOCATIONS {
+								if enemy_location == strings.TrimSpace(player_coord) && enemy_name != name {
+									//BATTLE
+									fmt.Println("battle")
+									//send battle noti to player
+									battleInfo := make(map[string]string)
+									battleInfo["battle"] = enemy_name
+									sentBattleInfo, _ := json.Marshal(battleInfo)
+									conn.Write([]byte(sentBattleInfo))
+
+									//send to the enemy
+									battledInfo := make(map[string]string)
+									battledInfo["battle"] = name
+									sentBattledInfo, _ := json.Marshal(battledInfo)
+									CONNECTIONS[enemy_name].Write([]byte(sentBattledInfo))
+
+									battleStatus = true
+									// start new routine for
+									// go battle(name, enemy_name)
+								}
+							}
 						}
-						//remove previous location
+
+						//remove previous location to make animation
 						delete(PLAYER_LOCATIONS, playerLocation)
 					}
 				}
-				PLAYER_LOCATIONS[player_coord] = name
-
+				if !battleStatus {
+					PLAYER_LOCATIONS[player_coord] = name
+				}
 			}
 		}
 
@@ -238,6 +263,7 @@ func HandleConnection(conn net.Conn) {
 			// if conn != tcpConn {
 			sentPLAYER_LOCATIONS, _ := json.Marshal(PLAYER_LOCATIONS)
 			tcpConn.Write([]byte(sentPLAYER_LOCATIONS))
+
 			// }
 		}
 	}
@@ -266,7 +292,7 @@ func handle(conn net.Conn) {
 		}
 		conn.Write([]byte(initialPokemons))
 		checkError(err)
-		time.Sleep(18 * time.Second)
+		time.Sleep(22 * time.Second)
 		CONNECTIONS[username] = conn
 		fmt.Println(CONNECTIONS)
 

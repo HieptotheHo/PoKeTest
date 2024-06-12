@@ -197,6 +197,34 @@ func showNewPoKemon(pokemon Pokemon) {
 
 	}
 }
+func battle() {
+	for {
+		cmd := exec.Command("cmd", "/c", "cls")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+		fmt.Println("LET'S BATTLE!")
+
+		var chosenPokemons []Pokemon
+		var pokemonName string
+		for {
+			fmt.Println("Choose your Pokemons")
+			fmt.Print("Name: ")
+			fmt.Scanln(&pokemonName)
+
+			for pokeIndex := range pokeBalls {
+				if pokeBalls[pokeIndex].Name == pokemonName {
+					chosenPokemons = append(chosenPokemons, pokeBalls[pokeIndex])
+				}
+			}
+			if len(chosenPokemons) == 3 {
+				break
+			}
+		}
+
+		DRAWBOARD_SIGNAL = true
+		drawBoard(BOARD)
+	}
+}
 
 // read from the server and print to console
 func readFromServer(conn net.Conn) {
@@ -220,70 +248,78 @@ func readFromServer(conn net.Conn) {
 		for location, id := range locations {
 			location = strings.TrimSpace(location)
 			id = strings.TrimSpace(id)
-			//HANDLE DISCONNECTION
-
-			if location == USERNAME {
-
-				if isNumber(id) {
-					index, _ := strconv.Atoi(id)
-					newPokemon := POKEMONS[index]
-
-					go showNewPoKemon(newPokemon)
-					DRAWBOARD_SIGNAL = false
-				}
-
+			//battle
+			if location == "battle" {
+				conn.Write([]byte("battle-" + strings.TrimSpace(id)))
+				go battle()
+				DRAWBOARD_SIGNAL = false
 			} else {
-				if id == "quit" {
-					fmt.Println(location + " is disconnected")
-					for ene_location, enemy := range ENEMIES {
-						if enemy == location {
-							enemyX, _ := strconv.Atoi(strings.Split(ene_location, "-")[0])
-							enemyY, _ := strconv.Atoi(strings.Split(ene_location, "-")[1])
+				if location == USERNAME {
+					//get pokemon
+					if isNumber(id) {
+						BOARD[X][Y] = ""
+						index, _ := strconv.Atoi(id)
+						newPokemon := POKEMONS[index]
 
-							BOARD[enemyX][enemyY] = ""
-							fmt.Println(ENEMIES)
-							delete(ENEMIES, ene_location)
-
-							break
-						}
+						go showNewPoKemon(newPokemon)
+						DRAWBOARD_SIGNAL = false
 					}
 
 				} else {
-					//RECEIVE MOVEMENT FROM PLAYERS AND SPAWN COORD OF POKEMONS AS A "MAP"
-					spawnX, _ := strconv.Atoi(strings.Split(location, "-")[0])
-					spawnY, _ := strconv.Atoi(strings.Split(location, "-")[1])
+					//HANDLE DISCONNECTION
+					if id == "quit" {
+						fmt.Println(location + " is disconnected")
+						for ene_location, enemy := range ENEMIES {
+							if enemy == location {
+								enemyX, _ := strconv.Atoi(strings.Split(ene_location, "-")[0])
+								enemyY, _ := strconv.Atoi(strings.Split(ene_location, "-")[1])
 
-					if isNumber(id) {
-						//pokemon
-						BOARD[spawnX][spawnY] = id
-					} else {
+								BOARD[enemyX][enemyY] = ""
+								fmt.Println(ENEMIES)
+								delete(ENEMIES, ene_location)
 
-						if id == USERNAME {
-							//you
-							X = spawnX
-							Y = spawnY
-							BOARD[spawnX][spawnY] = USERNAME
-						} else {
-							//enemies
-							for ene_location, enemy := range ENEMIES {
-								if enemy == id {
-									enemyX, _ := strconv.Atoi(strings.Split(ene_location, "-")[0])
-									enemyY, _ := strconv.Atoi(strings.Split(ene_location, "-")[1])
-
-									BOARD[enemyX][enemyY] = ""
-									delete(ENEMIES, ene_location)
-
-								}
-
+								break
 							}
-							ENEMIES[strconv.Itoa(spawnX)+"-"+strconv.Itoa(spawnY)] = id
-							BOARD[spawnX][spawnY] = "enemy"
-
 						}
 
-					}
-				}
+					} else {
+						//RECEIVE MOVEMENT FROM PLAYERS AND SPAWN COORD OF POKEMONS AS A "MAP"
+						spawnX, _ := strconv.Atoi(strings.Split(location, "-")[0])
+						spawnY, _ := strconv.Atoi(strings.Split(location, "-")[1])
 
+						if isNumber(id) || id == "" {
+							//pokemon
+							BOARD[spawnX][spawnY] = id
+						} else {
+
+							//player: you and enemies
+							if id == USERNAME {
+								//you
+								X = spawnX
+								Y = spawnY
+								BOARD[spawnX][spawnY] = USERNAME
+							} else {
+								//enemies
+								for ene_location, enemy := range ENEMIES {
+									if enemy == id {
+										enemyX, _ := strconv.Atoi(strings.Split(ene_location, "-")[0])
+										enemyY, _ := strconv.Atoi(strings.Split(ene_location, "-")[1])
+
+										BOARD[enemyX][enemyY] = ""
+										delete(ENEMIES, ene_location)
+
+									}
+
+								}
+								ENEMIES[strconv.Itoa(spawnX)+"-"+strconv.Itoa(spawnY)] = id
+								BOARD[spawnX][spawnY] = "enemy"
+
+							}
+
+						}
+					}
+
+				}
 			}
 
 		}
@@ -333,6 +369,13 @@ func main() {
 		n, err = conn.Read(buffer)
 		checkError(err)
 		pokemonIndexes := strings.Split(strings.TrimSpace(string(buffer[:n])), "-")
+		cmd := exec.Command("cmd", "/c", "cls")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+		cmd = exec.Command("cmd", "/c", "image2ascii.exe -f .\\title.png -r 0.3")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+		time.Sleep(5 * time.Second)
 		for _, pokemonIndex := range pokemonIndexes {
 			index, _ := strconv.Atoi(pokemonIndex)
 			showNewPoKemon(POKEMONS[index])
