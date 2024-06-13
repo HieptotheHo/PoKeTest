@@ -258,7 +258,7 @@ func HandleConnection(conn net.Conn) {
 		}
 
 		// Echo the message back to the client
-
+		fmt.Println(PLAYER_LOCATIONS)
 		for _, tcpConn := range CONNECTIONS {
 			// if conn != tcpConn {
 			sentPLAYER_LOCATIONS, _ := json.Marshal(PLAYER_LOCATIONS)

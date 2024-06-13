@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"image/jpeg"
+	"image/png"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 	"os/exec"
@@ -13,6 +16,8 @@ import (
 	"time"
 
 	"github.com/eiannone/keyboard"
+
+	gim "github.com/ozankasikci/go-image-merge"
 )
 
 var ROWS, COLS = 10, 18
@@ -203,6 +208,86 @@ func battle() {
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 		fmt.Println("LET'S BATTLE!")
+		for i := 0; i < len(pokeBalls); i++ {
+			str := "dh12788$!@1ufiu1!@%!F"
+
+			shuff := []rune(str)
+
+			// Shuffling the string
+			rand.Shuffle(len(shuff), func(i, j int) {
+				shuff[i], shuff[j] = shuff[j], shuff[i]
+			})
+
+			if i%3 == 0 {
+				names := pokeBalls[i].Name
+				if i+1 < len(pokeBalls) {
+					names += "\t\t" + pokeBalls[i+1].Name
+				}
+				if i+2 < len(pokeBalls) {
+					names += "\t\t" + pokeBalls[i+2].Name
+				}
+				fmt.Println(names)
+				if i+2 < len(pokeBalls) {
+					// Shuffling the string
+					rand.Shuffle(len(shuff), func(i, j int) {
+						shuff[i], shuff[j] = shuff[j], shuff[i]
+					})
+					grids := []*gim.Grid{
+						{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i].ID + ".png"},
+						{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i+1].ID + ".png"},
+						{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i+2].ID + ".png"},
+					}
+					rgba, _ := gim.New(grids, 3, 1).Merge()
+					file, _ := os.Create("./deck/" + string(shuff) + ".png")
+					jpeg.Encode(file, rgba, &jpeg.Options{Quality: 80})
+					png.Encode(file, rgba)
+
+					cmd = exec.Command("cmd", "/c", "image2ascii.exe -f .\\deck\\"+string(shuff)+".png -r 0.3")
+					cmd.Stdout = os.Stdout
+					cmd.Run()
+				} else {
+					if i+1 < len(pokeBalls) {
+						// Shuffling the string
+						rand.Shuffle(len(shuff), func(i, j int) {
+							shuff[i], shuff[j] = shuff[j], shuff[i]
+						})
+						grids := []*gim.Grid{
+							{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i].ID + ".png"},
+							{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i+1].ID + ".png"},
+						}
+						rgba, _ := gim.New(grids, 3, 1).Merge()
+						file, _ := os.Create("./deck/" + string(shuff) + ".png")
+						jpeg.Encode(file, rgba, &jpeg.Options{Quality: 80})
+						png.Encode(file, rgba)
+
+						cmd = exec.Command("cmd", "/c", "image2ascii.exe -f .\\deck\\"+string(shuff)+".png -r 0.3")
+						cmd.Stdout = os.Stdout
+						cmd.Run()
+					} else {
+						// Shuffling the string
+						rand.Shuffle(len(shuff), func(i, j int) {
+							shuff[i], shuff[j] = shuff[j], shuff[i]
+						})
+						grids := []*gim.Grid{
+							{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i].ID + ".png"},
+						}
+						rgba, _ := gim.New(grids, 3, 1).Merge()
+						file, _ := os.Create("./deck/" + string(shuff) + ".png")
+						jpeg.Encode(file, rgba, &jpeg.Options{Quality: 80})
+						png.Encode(file, rgba)
+
+						cmd = exec.Command("cmd", "/c", "image2ascii.exe -f .\\deck\\"+string(shuff)+".png -r 0.3")
+						cmd.Stdout = os.Stdout
+						cmd.Run()
+					}
+				}
+
+			}
+		}
+
+		// cmd = exec.Command("cmd", "/c", "image2ascii.exe -f ./path.png -r 0.5")
+		// cmd.Stdout = os.Stdout
+		// cmd.Run()
 
 		var chosenPokemons []Pokemon
 		var pokemonName string
