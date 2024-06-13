@@ -136,12 +136,22 @@ func handlePokemons() {
 
 			}
 		case <-despawnTicker5min.C:
-
+			despawnedPokemonLocations := make(map[string]string)
+			for i := 0; i < NUMBERTOPROCESS; i++ {
+				despawnedPokemonLocations[despawnQueues[i]] = ""
+			}
+			//CUT OFF THE FIRST 3 ELEMENTS or 50
+			despawnQueues = despawnQueues[NUMBERTOPROCESS:]
+			sent, _ := json.Marshal(despawnedPokemonLocations)
+			for _, tcpConn := range CONNECTIONS {
+				tcpConn.Write([]byte(sent))
+			}
 		}
 	}
 
 }
 func battle(player1 string, player2 string) {
+	fmt.Println(player1, " vs ", player2)
 
 }
 
@@ -156,7 +166,12 @@ func HandleConnection(conn net.Conn) {
 		battleStatus := false
 		// Read data from the connection
 		player_coord, err := reader.ReadString('\n')
-
+		fmt.Println(player_coord)
+		fmt.Println(PLAYER_LOCATIONS)
+		player_coord = strings.TrimSpace(player_coord)
+		if _, exists := PLAYER_LOCATIONS[strings.TrimSpace(player_coord)]; exists {
+			fmt.Println("heeeeeeeeee")
+		}
 		//DISCONNECTED
 		if err != nil {
 			for name, connection := range CONNECTIONS {
@@ -192,11 +207,12 @@ func HandleConnection(conn net.Conn) {
 
 		// iterate through connections
 		for name, connection := range CONNECTIONS {
+			name = strings.TrimSpace(name)
 			// find matching name
 			if connection == conn {
 				//find the name corresponding to connection address
 				for playerLocation, player := range PLAYER_LOCATIONS {
-
+					player = strings.TrimSpace(player)
 					if player == name {
 
 						//if player hits pokemon location
@@ -223,28 +239,26 @@ func HandleConnection(conn net.Conn) {
 									tcpConn.Write([]byte(sentPokemonGone))
 								}
 							}
-						} else {
-							for enemy_location, enemy_name := range PLAYER_LOCATIONS {
-								if enemy_location == strings.TrimSpace(player_coord) && enemy_name != name {
-									//BATTLE
-									fmt.Println("battle")
-									//send battle noti to player
-									battleInfo := make(map[string]string)
-									battleInfo["battle"] = enemy_name
-									sentBattleInfo, _ := json.Marshal(battleInfo)
-									conn.Write([]byte(sentBattleInfo))
+						} else if enemy_name, exists := PLAYER_LOCATIONS[strings.TrimSpace(player_coord)]; exists {
 
-									//send to the enemy
-									battledInfo := make(map[string]string)
-									battledInfo["battle"] = name
-									sentBattledInfo, _ := json.Marshal(battledInfo)
-									CONNECTIONS[enemy_name].Write([]byte(sentBattledInfo))
+							//BATTLE
+							fmt.Println("battle")
+							//send battle noti to player
+							battleInfo := make(map[string]string)
+							battleInfo["battle"] = enemy_name
+							sentBattleInfo, _ := json.Marshal(battleInfo)
+							conn.Write([]byte(sentBattleInfo))
 
-									battleStatus = true
-									// start new routine for
-									// go battle(name, enemy_name)
-								}
-							}
+							//send to the enemy
+							battledInfo := make(map[string]string)
+							battledInfo["battle"] = name
+							sentBattledInfo, _ := json.Marshal(battledInfo)
+							CONNECTIONS[enemy_name].Write([]byte(sentBattledInfo))
+
+							battleStatus = true
+							// start new routine for
+							go battle(name, enemy_name)
+
 						}
 
 						//remove previous location to make animation
@@ -293,7 +307,7 @@ func handle(conn net.Conn) {
 		conn.Write([]byte(initialPokemons))
 		checkError(err)
 		time.Sleep(22 * time.Second)
-		CONNECTIONS[username] = conn
+		CONNECTIONS[strings.TrimSpace(username)] = conn
 		fmt.Println(CONNECTIONS)
 
 		//send pokemon locations

@@ -298,6 +298,7 @@ func battle() {
 
 			for pokeIndex := range pokeBalls {
 				if pokeBalls[pokeIndex].Name == pokemonName {
+					fmt.Println("exists")
 					chosenPokemons = append(chosenPokemons, pokeBalls[pokeIndex])
 				}
 			}
