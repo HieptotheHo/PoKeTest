@@ -202,32 +202,51 @@ func showNewPoKemon(pokemon Pokemon) {
 
 	}
 }
-func battle() {
-	for {
-		cmd := exec.Command("cmd", "/c", "cls")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
-		fmt.Println("LET'S BATTLE!")
-		for i := 0; i < len(pokeBalls); i++ {
-			str := "dh12788$!@1ufiu1!@%!F"
 
-			shuff := []rune(str)
+func displayDeck() {
+	cmd := exec.Command("cmd", "/c", "cls")
+	cmd.Stdout = os.Stdout
+	cmd.Run()
+	fmt.Println("LET'S BATTLE!")
+	for i := 0; i < len(pokeBalls); i++ {
+		str := "dh12788$!@1ufiu1!@%!F"
 
-			// Shuffling the string
-			rand.Shuffle(len(shuff), func(i, j int) {
-				shuff[i], shuff[j] = shuff[j], shuff[i]
-			})
+		shuff := []rune(str)
 
-			if i%3 == 0 {
-				names := pokeBalls[i].Name
+		// Shuffling the string
+		rand.Shuffle(len(shuff), func(i, j int) {
+			shuff[i], shuff[j] = shuff[j], shuff[i]
+		})
+
+		if i%3 == 0 {
+			names := pokeBalls[i].Name
+			if i+1 < len(pokeBalls) {
+				names += "\t\t" + pokeBalls[i+1].Name
+			}
+			if i+2 < len(pokeBalls) {
+				names += "\t\t" + pokeBalls[i+2].Name
+			}
+			fmt.Println(names)
+			if i+2 < len(pokeBalls) {
+				// Shuffling the string
+				rand.Shuffle(len(shuff), func(i, j int) {
+					shuff[i], shuff[j] = shuff[j], shuff[i]
+				})
+				grids := []*gim.Grid{
+					{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i].ID + ".png"},
+					{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i+1].ID + ".png"},
+					{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i+2].ID + ".png"},
+				}
+				rgba, _ := gim.New(grids, 3, 1).Merge()
+				file, _ := os.Create("./deck/" + string(shuff) + ".png")
+				jpeg.Encode(file, rgba, &jpeg.Options{Quality: 80})
+				png.Encode(file, rgba)
+
+				cmd = exec.Command("cmd", "/c", "image2ascii.exe -f .\\deck\\"+string(shuff)+".png -r 0.3")
+				cmd.Stdout = os.Stdout
+				cmd.Run()
+			} else {
 				if i+1 < len(pokeBalls) {
-					names += "\t\t" + pokeBalls[i+1].Name
-				}
-				if i+2 < len(pokeBalls) {
-					names += "\t\t" + pokeBalls[i+2].Name
-				}
-				fmt.Println(names)
-				if i+2 < len(pokeBalls) {
 					// Shuffling the string
 					rand.Shuffle(len(shuff), func(i, j int) {
 						shuff[i], shuff[j] = shuff[j], shuff[i]
@@ -235,7 +254,6 @@ func battle() {
 					grids := []*gim.Grid{
 						{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i].ID + ".png"},
 						{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i+1].ID + ".png"},
-						{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i+2].ID + ".png"},
 					}
 					rgba, _ := gim.New(grids, 3, 1).Merge()
 					file, _ := os.Create("./deck/" + string(shuff) + ".png")
@@ -246,69 +264,33 @@ func battle() {
 					cmd.Stdout = os.Stdout
 					cmd.Run()
 				} else {
-					if i+1 < len(pokeBalls) {
-						// Shuffling the string
-						rand.Shuffle(len(shuff), func(i, j int) {
-							shuff[i], shuff[j] = shuff[j], shuff[i]
-						})
-						grids := []*gim.Grid{
-							{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i].ID + ".png"},
-							{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i+1].ID + ".png"},
-						}
-						rgba, _ := gim.New(grids, 3, 1).Merge()
-						file, _ := os.Create("./deck/" + string(shuff) + ".png")
-						jpeg.Encode(file, rgba, &jpeg.Options{Quality: 80})
-						png.Encode(file, rgba)
-
-						cmd = exec.Command("cmd", "/c", "image2ascii.exe -f .\\deck\\"+string(shuff)+".png -r 0.3")
-						cmd.Stdout = os.Stdout
-						cmd.Run()
-					} else {
-						// Shuffling the string
-						rand.Shuffle(len(shuff), func(i, j int) {
-							shuff[i], shuff[j] = shuff[j], shuff[i]
-						})
-						grids := []*gim.Grid{
-							{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i].ID + ".png"},
-						}
-						rgba, _ := gim.New(grids, 3, 1).Merge()
-						file, _ := os.Create("./deck/" + string(shuff) + ".png")
-						jpeg.Encode(file, rgba, &jpeg.Options{Quality: 80})
-						png.Encode(file, rgba)
-
-						cmd = exec.Command("cmd", "/c", "image2ascii.exe -f .\\deck\\"+string(shuff)+".png -r 0.3")
-						cmd.Stdout = os.Stdout
-						cmd.Run()
+					// Shuffling the string
+					rand.Shuffle(len(shuff), func(i, j int) {
+						shuff[i], shuff[j] = shuff[j], shuff[i]
+					})
+					grids := []*gim.Grid{
+						{ImageFilePath: "./pokemon_images/pokemon_" + pokeBalls[i].ID + ".png"},
 					}
-				}
+					rgba, _ := gim.New(grids, 3, 1).Merge()
+					file, _ := os.Create("./deck/" + string(shuff) + ".png")
+					jpeg.Encode(file, rgba, &jpeg.Options{Quality: 80})
+					png.Encode(file, rgba)
 
+					cmd = exec.Command("cmd", "/c", "image2ascii.exe -f .\\deck\\"+string(shuff)+".png -r 0.3")
+					cmd.Stdout = os.Stdout
+					cmd.Run()
+				}
 			}
 		}
+	}
+}
+func battle() {
+	displayDeck()
+	for {
 
 		// cmd = exec.Command("cmd", "/c", "image2ascii.exe -f ./path.png -r 0.5")
 		// cmd.Stdout = os.Stdout
 		// cmd.Run()
-
-		var chosenPokemons []Pokemon
-		var pokemonName string
-		for {
-			fmt.Println("Choose your Pokemons")
-			fmt.Print("Name: ")
-			fmt.Scanln(&pokemonName)
-
-			for pokeIndex := range pokeBalls {
-				if pokeBalls[pokeIndex].Name == pokemonName {
-					fmt.Println("exists")
-					chosenPokemons = append(chosenPokemons, pokeBalls[pokeIndex])
-				}
-			}
-			if len(chosenPokemons) == 3 {
-				break
-			}
-		}
-
-		DRAWBOARD_SIGNAL = true
-		drawBoard(BOARD)
 	}
 }
 
@@ -336,8 +318,41 @@ func readFromServer(conn net.Conn) {
 			id = strings.TrimSpace(id)
 			//battle
 			if location == "battle" {
+				if id == "hi" {
+					fmt.Println("hello")
+				} else {
+					//enter pokemons for battling
+					var chosenPokemons []Pokemon
+					var pokemonName string
+
+					for {
+						fmt.Println("Choose your Pokemons")
+						fmt.Print("Name: ")
+						fmt.Scanln(&pokemonName)
+
+						for pokeIndex := range pokeBalls {
+							if pokeBalls[pokeIndex].Name == pokemonName {
+								fmt.Println("exists")
+								chosenPokemons = append(chosenPokemons, pokeBalls[pokeIndex])
+								conn.Write([]byte("battle-" + USERNAME + "-" + strconv.Itoa(pokeIndex)))
+							}
+						}
+						if len(chosenPokemons) == 3 {
+							cmd := exec.Command("cmd", "/c", "cls")
+							cmd.Stdout = os.Stdout
+							cmd.Run()
+							break
+						}
+					}
+
+					DRAWBOARD_SIGNAL = true
+					drawBoard(BOARD)
+					/////
+				}
+
+				//send to server your move in battling
 				conn.Write([]byte("battle-" + strings.TrimSpace(id)))
-				go battle()
+
 				DRAWBOARD_SIGNAL = false
 			} else {
 				if location == USERNAME {

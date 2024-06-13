@@ -43,6 +43,12 @@ var despawnQueues []string
 var POKEMON_LOCATIONS = make(map[string]string)
 var PLAYER_LOCATIONS = make(map[string]string)
 
+var pokeBalls_P1 []Pokemon
+var pokeBalls_P2 []Pokemon
+
+var P1 string
+var P2 string
+
 // ////////////////////////////////////////////////////////////////////////////////////
 // Load players.json to PLAYERS
 func loadPlayers(filename string) []Player {
@@ -65,7 +71,10 @@ func loadPlayers(filename string) []Player {
 
 	return players
 }
-
+func isNumber(str string) bool {
+	_, err := strconv.Atoi(str)
+	return err == nil
+}
 func loadPokemons(filename string) []Pokemon {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -200,8 +209,28 @@ func HandleConnection(conn net.Conn) {
 			return
 
 		}
-
+		//battling message
 		if strings.Split(player_coord, "-")[0] == "battle" {
+			P := strings.Split(player_coord, "-")[1]
+			main_message := strings.Split(player_coord, "-")[2]
+			if isNumber(main_message) {
+				pokeIndex, _ := strconv.Atoi(main_message)
+				if P == P1 {
+					pokeBalls_P1 = append(pokeBalls_P1, POKEMONS[pokeIndex])
+				} else if P == P2 {
+					pokeBalls_P2 = append(pokeBalls_P2, POKEMONS[pokeIndex])
+				}
+
+				if len(pokeBalls_P1) == 3 && len(pokeBalls_P2) == 3 {
+					speed_P1, _ := strconv.Atoi(pokeBalls_P1[0].Stats["Speed"])
+					speed_P2, _ := strconv.Atoi(pokeBalls_P2[0].Stats["Speed"])
+					if speed_P1 >= speed_P2 {
+						//sent message to p1 to go first
+					} else {
+						//sent message to p2 to go first
+					}
+				}
+			}
 
 		}
 
@@ -256,13 +285,19 @@ func HandleConnection(conn net.Conn) {
 							CONNECTIONS[enemy_name].Write([]byte(sentBattledInfo))
 
 							battleStatus = true
+							pokeBalls_P1 = []Pokemon{}
+							pokeBalls_P2 = []Pokemon{}
+							P1 = name
+							P2 = enemy_name
 							// start new routine for
 							go battle(name, enemy_name)
 
 						}
 
 						//remove previous location to make animation
-						delete(PLAYER_LOCATIONS, playerLocation)
+						if !battleStatus {
+							delete(PLAYER_LOCATIONS, playerLocation)
+						}
 					}
 				}
 				if !battleStatus {
