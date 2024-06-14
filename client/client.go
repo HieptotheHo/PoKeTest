@@ -318,9 +318,12 @@ func readFromServer(conn net.Conn) {
 			id = strings.TrimSpace(id)
 			//battle
 			if location == "battle" {
-				if id == "hi" {
+
+				if id == USERNAME {
+					//MY TURN
 					fmt.Println("hello")
 				} else {
+					displayDeck()
 					//enter pokemons for battling
 					var chosenPokemons []Pokemon
 					var pokemonName string
@@ -334,7 +337,7 @@ func readFromServer(conn net.Conn) {
 							if pokeBalls[pokeIndex].Name == pokemonName {
 								fmt.Println("exists")
 								chosenPokemons = append(chosenPokemons, pokeBalls[pokeIndex])
-								conn.Write([]byte("battle-" + USERNAME + "-" + strconv.Itoa(pokeIndex)))
+								conn.Write([]byte("battle-" + USERNAME + "-" + (pokeBalls[pokeIndex].ID + "\n")))
 							}
 						}
 						if len(chosenPokemons) == 3 {
@@ -344,6 +347,11 @@ func readFromServer(conn net.Conn) {
 							break
 						}
 					}
+
+					fmt.Println("Wait for your opponent to choose pokemons...")
+
+					// Read server's response
+					// message, err := reader.ReadString('\n')
 
 					DRAWBOARD_SIGNAL = true
 					drawBoard(BOARD)

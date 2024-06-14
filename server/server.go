@@ -175,12 +175,10 @@ func HandleConnection(conn net.Conn) {
 		battleStatus := false
 		// Read data from the connection
 		player_coord, err := reader.ReadString('\n')
-		fmt.Println(player_coord)
-		fmt.Println(PLAYER_LOCATIONS)
+		fmt.Println("message: ", player_coord)
+
 		player_coord = strings.TrimSpace(player_coord)
-		if _, exists := PLAYER_LOCATIONS[strings.TrimSpace(player_coord)]; exists {
-			fmt.Println("heeeeeeeeee")
-		}
+
 		//DISCONNECTED
 		if err != nil {
 			for name, connection := range CONNECTIONS {
@@ -213,107 +211,122 @@ func HandleConnection(conn net.Conn) {
 		if strings.Split(player_coord, "-")[0] == "battle" {
 			P := strings.Split(player_coord, "-")[1]
 			main_message := strings.Split(player_coord, "-")[2]
+			turn := make(map[string]string)
+			//submit pokemons
 			if isNumber(main_message) {
-				pokeIndex, _ := strconv.Atoi(main_message)
-				if P == P1 {
-					pokeBalls_P1 = append(pokeBalls_P1, POKEMONS[pokeIndex])
-				} else if P == P2 {
-					pokeBalls_P2 = append(pokeBalls_P2, POKEMONS[pokeIndex])
+				fmt.Println("Submitting pokemon...")
+				pokeId := main_message
+				for pokeIndex := 0; pokeIndex < len(POKEMONS); pokeIndex++ {
+					if POKEMONS[pokeIndex].ID == pokeId {
+						if P == P1 {
+							pokeBalls_P1 = append(pokeBalls_P1, POKEMONS[pokeIndex])
+						} else if P == P2 {
+							pokeBalls_P2 = append(pokeBalls_P2, POKEMONS[pokeIndex])
+						}
+						break
+					}
+
 				}
 
 				if len(pokeBalls_P1) == 3 && len(pokeBalls_P2) == 3 {
+					fmt.Println("Let's Battle!")
+					CONNECTIONS[P1].Write([]byte("ready"))
+					CONNECTIONS[P2].Write([]byte("ready"))
 					speed_P1, _ := strconv.Atoi(pokeBalls_P1[0].Stats["Speed"])
 					speed_P2, _ := strconv.Atoi(pokeBalls_P2[0].Stats["Speed"])
 					if speed_P1 >= speed_P2 {
 						//sent message to p1 to go first
+						turn["battle"] = P1
 					} else {
 						//sent message to p2 to go first
+						turn["battle"] = P2
 					}
 				}
 			}
 
-		}
+		} else {
 
-		// iterate through connections
-		for name, connection := range CONNECTIONS {
-			name = strings.TrimSpace(name)
-			// find matching name
-			if connection == conn {
-				//find the name corresponding to connection address
-				for playerLocation, player := range PLAYER_LOCATIONS {
-					player = strings.TrimSpace(player)
-					if player == name {
+			// iterate through connections
+			for name, connection := range CONNECTIONS {
+				name = strings.TrimSpace(name)
+				// find matching name
+				if connection == conn {
+					//find the name corresponding to connection address
+					for playerLocation, player := range PLAYER_LOCATIONS {
+						player = strings.TrimSpace(player)
+						if player == name {
 
-						//if player hits pokemon location
-						if pokemonIndex, exists := POKEMON_LOCATIONS[strings.TrimSpace(player_coord)]; exists {
-							fmt.Println("CATCHING...")
-							//send pokemon id to the player through "conn"
-							// catched: "index"
-							catched := make(map[string]string)
-							catched[strings.TrimSpace(name)] = pokemonIndex
+							//if player hits pokemon location
+							if pokemonIndex, exists := POKEMON_LOCATIONS[strings.TrimSpace(player_coord)]; exists {
+								fmt.Println("CATCHING...")
+								//send pokemon id to the player through "conn"
+								// catched: "index"
+								catched := make(map[string]string)
+								catched[strings.TrimSpace(name)] = pokemonIndex
 
-							sentCatched, _ := json.Marshal(catched)
-							conn.Write(sentCatched)
-							//remove location of the pokemon from BOARD and POKEMON_LOCATIONS
-							pokemonX, _ := strconv.Atoi(strings.Split(playerLocation, "-")[0])
-							pokemonY, _ := strconv.Atoi(strings.Split(playerLocation, "-")[1])
-							BOARD[pokemonX][pokemonY] = ""
-							delete(POKEMON_LOCATIONS, strings.TrimSpace(player_coord))
-							fmt.Println(POKEMON_LOCATIONS)
-							for _, tcpConn := range CONNECTIONS {
-								if tcpConn != conn {
-									pokemonGone := make(map[string]string)
-									pokemonGone[strings.TrimSpace(player_coord)] = ""
-									sentPokemonGone, _ := json.Marshal(pokemonGone)
-									tcpConn.Write([]byte(sentPokemonGone))
+								sentCatched, _ := json.Marshal(catched)
+								conn.Write(sentCatched)
+								//remove location of the pokemon from BOARD and POKEMON_LOCATIONS
+								pokemonX, _ := strconv.Atoi(strings.Split(playerLocation, "-")[0])
+								pokemonY, _ := strconv.Atoi(strings.Split(playerLocation, "-")[1])
+								BOARD[pokemonX][pokemonY] = ""
+								delete(POKEMON_LOCATIONS, strings.TrimSpace(player_coord))
+								fmt.Println(POKEMON_LOCATIONS)
+								for _, tcpConn := range CONNECTIONS {
+									if tcpConn != conn {
+										pokemonGone := make(map[string]string)
+										pokemonGone[strings.TrimSpace(player_coord)] = ""
+										sentPokemonGone, _ := json.Marshal(pokemonGone)
+										tcpConn.Write([]byte(sentPokemonGone))
+									}
 								}
+							} else if enemy_name, exists := PLAYER_LOCATIONS[strings.TrimSpace(player_coord)]; exists {
+								enemy_name = strings.TrimSpace(enemy_name)
+								//BATTLE
+								fmt.Println("battle")
+								//send battle noti to player
+								battleInfo := make(map[string]string)
+								battleInfo["battle"] = enemy_name
+								sentBattleInfo, _ := json.Marshal(battleInfo)
+								conn.Write([]byte(sentBattleInfo))
+
+								//send to the enemy
+								battledInfo := make(map[string]string)
+								battledInfo["battle"] = name
+								sentBattledInfo, _ := json.Marshal(battledInfo)
+								CONNECTIONS[enemy_name].Write([]byte(sentBattledInfo))
+
+								battleStatus = true
+								pokeBalls_P1 = []Pokemon{}
+								pokeBalls_P2 = []Pokemon{}
+								P1 = name
+								P2 = enemy_name
+								// start new routine for
+								// go battle(name, enemy_name)
+
 							}
-						} else if enemy_name, exists := PLAYER_LOCATIONS[strings.TrimSpace(player_coord)]; exists {
 
-							//BATTLE
-							fmt.Println("battle")
-							//send battle noti to player
-							battleInfo := make(map[string]string)
-							battleInfo["battle"] = enemy_name
-							sentBattleInfo, _ := json.Marshal(battleInfo)
-							conn.Write([]byte(sentBattleInfo))
-
-							//send to the enemy
-							battledInfo := make(map[string]string)
-							battledInfo["battle"] = name
-							sentBattledInfo, _ := json.Marshal(battledInfo)
-							CONNECTIONS[enemy_name].Write([]byte(sentBattledInfo))
-
-							battleStatus = true
-							pokeBalls_P1 = []Pokemon{}
-							pokeBalls_P2 = []Pokemon{}
-							P1 = name
-							P2 = enemy_name
-							// start new routine for
-							go battle(name, enemy_name)
-
-						}
-
-						//remove previous location to make animation
-						if !battleStatus {
-							delete(PLAYER_LOCATIONS, playerLocation)
+							//remove previous location to make animation
+							if !battleStatus {
+								delete(PLAYER_LOCATIONS, playerLocation)
+							}
 						}
 					}
-				}
-				if !battleStatus {
-					PLAYER_LOCATIONS[player_coord] = name
+					if !battleStatus {
+						PLAYER_LOCATIONS[player_coord] = name
+					}
 				}
 			}
-		}
 
-		// Echo the message back to the client
-		fmt.Println(PLAYER_LOCATIONS)
-		for _, tcpConn := range CONNECTIONS {
-			// if conn != tcpConn {
-			sentPLAYER_LOCATIONS, _ := json.Marshal(PLAYER_LOCATIONS)
-			tcpConn.Write([]byte(sentPLAYER_LOCATIONS))
+			// Echo the message back to the client
+			fmt.Println(PLAYER_LOCATIONS)
+			for _, tcpConn := range CONNECTIONS {
+				// if conn != tcpConn {
+				sentPLAYER_LOCATIONS, _ := json.Marshal(PLAYER_LOCATIONS)
+				tcpConn.Write([]byte(sentPLAYER_LOCATIONS))
 
-			// }
+				// }
+			}
 		}
 	}
 }
